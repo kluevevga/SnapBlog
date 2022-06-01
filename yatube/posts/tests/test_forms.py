@@ -1,48 +1,44 @@
 import tempfile
 import shutil
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.contrib.auth import get_user_model
-from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.conf import settings
+from django.urls import reverse
 
-from ..models import Post, Group, Comment, Follow
+from ..models import Post, Comment, Follow
+from .utils import Utils
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class TaskCreateFormTests(TestCase):
+class TaskCreateFormTests(TestCase, Utils):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(
-            username='имя')
-        cls.user_follow = User.objects.create_user(
-            username='followed')
-        cls.group = Group.objects.create(
-            title='Заголовок группы',
-            description='Описание группы')
-        cls.post = Post.objects.create(
-            text='Пост до изменения',
-            author=cls.user,
-            group=cls.group)
+        cls.user, user_name = cls.new_user()
+        cls.user_2, user_name_2 = cls.new_user()
+        cls.group, *_ = cls.new_group()
+        cls.new_post(cls.user, group=cls.group)
 
         cls.urls = {
             'create': reverse('posts:post_create'),
-            'profile': reverse('posts:profile', kwargs={'username': 'имя'}),
             'posts/1': reverse('posts:post_detail', kwargs={'post_id': 1}),
             'posts/1/edit': reverse('posts:post_edit', kwargs={'post_id': 1}),
             'posts/1/comment': reverse(
                 'posts:add_comment', kwargs={'post_id': 1}),
+            'profile': reverse(
+                'posts:profile', kwargs={'username': user_name}),
             'follow': reverse(
-                'posts:profile_follow', kwargs={'username': 'followed'}),
+                'posts:profile_follow', kwargs={'username': user_name_2}),
             'follow-redirect': reverse(
-                'posts:profile', kwargs={'username': 'followed'}),
+                'posts:profile', kwargs={'username': user_name_2}),
             'unfollow': reverse(
-                'posts:profile_unfollow', kwargs={'username': 'followed'})
+                'posts:profile_unfollow', kwargs={'username': user_name_2})
         }
 
     @classmethod
@@ -51,6 +47,7 @@ class TaskCreateFormTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        cache.clear()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
@@ -68,6 +65,7 @@ class TaskCreateFormTests(TestCase):
             name='small.gif',
             content=small_gif,
             content_type='image/gif')
+
         form_data = {
             'text': 'Добавлен пост 2',
             'group': '',
@@ -105,7 +103,6 @@ class TaskCreateFormTests(TestCase):
             self.urls['posts/1/edit'],
             data={'text': 'Пост pk=1 изменен', 'group': 1},
             follow=True)
-
         self.assertRedirects(response, self.urls['posts/1'])
         self.assertTrue(
             Post.objects.filter(
@@ -138,7 +135,7 @@ class TaskCreateFormTests(TestCase):
         self.assertTrue(
             Follow.objects.filter(
                 user=self.user,
-                author=self.user_follow
+                author=self.user_2
             ).exists()
         )
 

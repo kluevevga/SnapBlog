@@ -2,59 +2,36 @@ import tempfile
 import shutil
 import time
 
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.conf import settings
 from django.urls import reverse
 from django import forms
-from django.conf import settings
-from core.slugify.slugify import slugify
 
-from ..models import Post, Group, Comment, Follow
+from ..models import Post, Group
+from .utils import Utils
 
 User = get_user_model()
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class PostsViewsTests(TestCase):
+class PostsViewsTests(TestCase, Utils):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B')
-        uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=small_gif,
-            content_type='image/gif')
 
-        cls.user = User.objects.create_user(
-            username='автор')
-        cls.group = Group.objects.create(
-            title='Название группы',
-            description='Описание группы')
-        cls.post = Post.objects.create(
-            author=cls.user,
-            text='Текст поста',
-            group=cls.group,
-            image=uploaded)
-        cls.post = Comment.objects.create(
-            text='Текст комментария отображается в post_detail',
-            post=cls.post,
-            author=cls.user)
+        cls.user, cls.user_name = cls.new_user()
+        group, cls.group_title, cls.group_description = cls.new_group()
+        post, cls.post_text, cls.img = cls.new_post_with_img(cls.user, group)
+        cls.comment_text = cls.new_comment(cls.user, post)
 
-        slug = slugify('Название группы')
         urls = [
             reverse('posts:index'),
             reverse('posts:follow_index'),
-            reverse('posts:group_list', kwargs={'slug': slug}),
-            reverse('posts:profile', kwargs={'username': 'автор'}),
+            reverse('posts:group_list', kwargs={'slug': group.slug}),
+            reverse('posts:profile', kwargs={'username': cls.user_name}),
             reverse('posts:post_detail', kwargs={'post_id': 1}),
             reverse('posts:post_edit', kwargs={'post_id': 1}),
             reverse('posts:post_create'),
@@ -98,10 +75,10 @@ class PostsViewsTests(TestCase):
 
     def check_post(self, post):
         self.assertIsInstance(post, Post)
-        self.assertEqual(post.author.username, 'автор')
-        self.assertEqual(post.text, 'Текст поста')
-        self.assertEqual(post.group.title, 'Название группы')
-        self.assertEqual(post.image, 'posts/small.gif')
+        self.assertEqual(post.author.username, self.user_name)
+        self.assertEqual(post.text, self.post_text)
+        self.assertEqual(post.group.title, self.group_title)
+        self.assertEqual(post.image, f'posts/{self.img}')
 
     def check_first_post(self, response):
         first_post = response.context['page_obj'][0]
@@ -109,8 +86,8 @@ class PostsViewsTests(TestCase):
 
     def check_group(self, group):
         self.assertIsInstance(group, Group)
-        self.assertEqual(group.title, 'Название группы')
-        self.assertEqual(group.description, 'Описание группы')
+        self.assertEqual(group.title, self.group_title)
+        self.assertEqual(group.description, self.group_description)
 
     def test_templates(self):
         for reverse_name, template in self.test_data.items():
@@ -128,11 +105,12 @@ class PostsViewsTests(TestCase):
         self.check_group(response.context['group'])
 
     def test_context_post_detail(self):
+        """Текст комментария отображается в post_detail"""
         response = self.authorized_client.get(self.endpoints['post_detail'])
         self.check_post(response.context['post'])
 
         received = response.context['comments'][0].text
-        expected = 'Текст комментария отображается в post_detail'
+        expected = self.comment_text
         self.assertEqual(received, expected)
 
     def test_context_profile(self):
@@ -140,7 +118,7 @@ class PostsViewsTests(TestCase):
         self.check_first_post(response)
         user = response.context['user_obj']
         self.assertIsInstance(user, User)
-        self.assertEqual(user.username, 'автор')
+        self.assertEqual(user.username, self.user_name)
 
     def test_context_post_create(self):
         response = self.authorized_client.get(self.endpoints['post_create'])
@@ -164,10 +142,8 @@ class PostsViewsTests(TestCase):
         2. Не появляется в ленте тех, кто не подписан.
         """
         # 1 ---
-        following_user = User.objects.create_user(username='following автор')
-        Follow.objects.create(
-            user=following_user,
-            author=self.user)
+        following_user, _ = self.new_user()
+        self.new_follow(following_user, self.user)
 
         client = Client()
         client.force_login(following_user)

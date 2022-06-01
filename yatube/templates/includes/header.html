@@ -4,19 +4,13 @@
    <nav class="navbar">
       <div class="container">
 
+         <span class="navbar-brand">
          {% if is_home_page %}
-         <div class="navbar-brand">
-            <img src="{% static 'img/logo.png' %}" width="30" height="30"
-                 class="d-inline-block align-top" alt="logo">
-            <span>Ya</span>tube
-         </div>
+            {% include 'includes/logo.html' %}
          {% else %}
-         <a class="navbar-brand" href="{% url 'posts:index' %}">
-            <img src="{% static 'img/logo.png' %}" width="30" height="30"
-                 class="d-inline-block align-top" alt="logo">
-            <span>Ya</span>tube
-         </a>
+            <a href="{% url 'posts:index' %}">{% include 'includes/logo.html' %}</a>
          {% endif %}
+         </span>
 
          <ul class="nav nav-pills">
             {% with request.resolver_match.view_name as current_url %}

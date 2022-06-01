@@ -1,24 +1,19 @@
 from django.test import TestCase
 
 from core.slugify.slugify import slugify
-from ..models import Post, Group, User
+from .utils import Utils
 
 
-class PostsModelTest(TestCase):
+class PostsModelTest(TestCase, Utils):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(
-            username='имя')
-        cls.post = Post.objects.create(
-            text='Пост длинной 23 символа',
-            author=cls.user)
-        cls.post_short_text = Post.objects.create(
-            text='Пост 15 символа',
-            author=cls.user)
-        cls.group = Group.objects.create(
-            title=f'Заголовок группы длинной 101 символов{"_" * 64}',
-            description='Описание группы')
+
+        user, _ = cls.new_user()
+        cls.post, _ = cls.new_post(user, text='Пост длинной 23 символа')
+        cls.post_short_text, _ = cls.new_post(user, text='Пост 15 символа')
+        cls.group, *_ = cls.new_group(
+            title=f'Заголовок группы длинной 101 символов{"_" * 64}')
 
     def test_post__str__(self):
         received = str(self.post)

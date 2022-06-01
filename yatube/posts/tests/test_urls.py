@@ -1,30 +1,25 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
+from django.core.cache import cache
 
-from ..models import Post, Group
+from .utils import Utils
 
 User = get_user_model()
 
 
-class PostsURLTests(TestCase):
+class PostsURLTests(TestCase, Utils):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='вася')
-        cls.post = Post.objects.create(
-            text='Пост авторизованного пользователя вася',
-            author=cls.user, )
-        Group.objects.create(title='user-group')
 
-        cls.user_not_authorized = User.objects.create_user(username='федя')
-        cls.post_not_accessible = Post.objects.create(
-            text='Пост пользователя федя',
-            author=cls.user_not_authorized, )
+        cls.user, user_name = cls.new_user()
+        cls.new_post(cls.user)
+        group, *_ = cls.new_group()
 
         cls.public = {
             '/': 'posts/index.html',
-            '/group/user-group/': 'posts/group_list.html',
-            '/profile/вася/': 'posts/profile.html',
+            f'/group/{group.slug}/': 'posts/group_list.html',
+            f'/profile/{user_name}/': 'posts/profile.html',
             '/posts/1/': 'posts/post_detail.html',
         }
         cls.authorized = {
@@ -34,6 +29,7 @@ class PostsURLTests(TestCase):
         cls.end_points = {**cls.public, **cls.authorized}
 
     def setUp(self):
+        cache.clear()
         self.guest_client = Client()
 
         self.authorized_client = Client()
@@ -52,10 +48,12 @@ class PostsURLTests(TestCase):
                 code = self.authorized_client.get(url).status_code
                 self.assertEqual(code, 200, self.get_err_txt(url, code, True))
 
-        response = self.authorized_client.get('/posts/2/edit/', follow=True)
-        self.assertEqual(
-            response.status_code, 403,
-            "user(вася) can not access edit-page of other's users post")
+        user_2, _ = self.new_user()
+        post_2, _ = self.new_post(user_2)
+        url_2 = f'/posts/{post_2.pk}/edit/'
+        response = self.authorized_client.get(url_2, follow=True)
+        self.assertEqual(response.status_code, 403,
+                         "user can not access edit-page of other's users")
 
     def test_status_code_not_authorized(self):
         for url in self.public.keys():

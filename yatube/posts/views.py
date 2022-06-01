@@ -14,10 +14,10 @@ def get_paginator_slice(post_list, request):
 
 
 def index(request):
-    post_list = Post.objects.all()
+    post_list = Post.objects.select_related('group').all()
     page_obj = get_paginator_slice(post_list, request)
 
-    context = {'page_obj': page_obj}
+    context = {'page_obj': page_obj, 'is_home_page': True}
     return render(request, 'posts/index.html', context)
 
 
@@ -41,8 +41,9 @@ def post_detail(request, post_id):
 
 def profile(request, username):
     user_obj = get_object_or_404(User, username=username)
-    post_list = Post.objects.filter(author=user_obj)
+    post_list = Post.objects.select_related('group').filter(author=user_obj)
     page_obj = get_paginator_slice(post_list, request)
+    subscribers = user_obj.following.count()
 
     following = None
     if not request.user.is_anonymous:
@@ -51,7 +52,8 @@ def profile(request, username):
     context = {
         'page_obj': page_obj,
         'user_obj': user_obj,
-        'following': following
+        'following': following,
+        'subscribers': subscribers
     }
     return render(request, 'posts/profile.html', context)
 
@@ -105,19 +107,17 @@ def follow_index(request):
     ).filter(author__following__user=request.user)
     page_obj = get_paginator_slice(post, request)
 
-    context = {'page_obj': page_obj}
+    context = {'page_obj': page_obj, 'is_home_page': True}
     return render(request, 'posts/follow.html', context)
 
 
 @login_required
 def profile_follow(request, username):
-    user = User.objects.get(username=request.user)
     author = User.objects.get(username=username)
-    is_exists = Follow.objects.filter(author=author, user=user).exists()
+    user = User.objects.get(username=request.user)
 
-    if user != author and not is_exists:
-        Follow.objects.create(user=user, author=author)
-
+    if user != author:
+        Follow.objects.get_or_create(author=author, user=request.user)
     return redirect('posts:profile', username=username)
 
 
