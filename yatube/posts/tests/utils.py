@@ -60,5 +60,5 @@ class Utils:
 
     @classmethod
     def new_follow(cls, user, author):
-        """new_follow(User_logged_in, User_2) -> text"""
+        """new_follow(User_logged_in, User_2)"""
         Follow.objects.create(user=user, author=author)

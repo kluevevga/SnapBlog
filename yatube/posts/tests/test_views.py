@@ -61,8 +61,7 @@ class PostsViewsTests(TestCase, Utils):
         cls.endpoints = dict(zip(alias, urls))
         cls.form_fields = {
             'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
+            'group': forms.fields.ChoiceField}
 
     @classmethod
     def tearDownClass(cls):

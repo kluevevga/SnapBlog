@@ -14,8 +14,7 @@ class Post(models.Model):
                 5,
                 'Пост должен содержать не менее 5 символов')],
         verbose_name='Текст поста',
-        help_text='Текст нового поста'
-    )
+        help_text='Текст нового поста')
     pub_date = models.DateTimeField(
         db_index=True,
         verbose_name='Дата публикации',
@@ -23,8 +22,7 @@ class Post(models.Model):
     image = models.ImageField(
         'Картинка',
         upload_to='posts/',
-        blank=True
-    )
+        blank=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -77,8 +75,7 @@ class Group(models.Model):
 class Comment(models.Model):
     text = text = models.TextField(
         verbose_name='Текст комментария',
-        help_text='Текст нового комментария'
-    )
+        help_text='Текст нового комментария')
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,

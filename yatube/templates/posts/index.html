@@ -10,7 +10,7 @@
 
 {% cache 20 sidebar %}
 {% for post in page_obj %}
-{% include 'includes/article.html' %}
+{% include 'includes/article.html' with show_link=True %}
 {% endfor %}
 {% endcache %}
 

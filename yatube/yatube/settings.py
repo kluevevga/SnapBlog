@@ -5,7 +5,9 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver',
+                 'www.evga.pythonanywhere.com/',
+                 'evga.pythonanywhere.com/']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -19,9 +21,11 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'about.apps.AboutConfig',
     'sorl.thumbnail',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -58,6 +62,8 @@ DATABASES = {
     }
 }
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 auth = 'django.contrib.auth.password_validation.'
@@ -79,8 +85,10 @@ LOGIN_REDIRECT_URL = 'posts:index'
 # LOGOUT_REDIRECT_URL = 'posts:index'  # LOGOUT_REDIRECT_URL = '/auth/logout/'
 
 # static https://docs.djangoproject.com/en/2.2/howto/static-files/
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
+
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -98,3 +106,7 @@ USE_L10N = True
 USE_TZ = True
 
 SECRET_KEY = '+w4=!v8lmfm+ioc+$c7xlbf(_=6uohn=kaf(dcew2vsyghqukh'
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]

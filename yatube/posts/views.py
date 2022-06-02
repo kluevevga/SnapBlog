@@ -14,7 +14,7 @@ def get_paginator_slice(post_list, request):
 
 
 def index(request):
-    post_list = Post.objects.select_related('group').all()
+    post_list = Post.objects.all().select_related('group')
     page_obj = get_paginator_slice(post_list, request)
 
     context = {'page_obj': page_obj, 'is_home_page': True}
@@ -53,8 +53,7 @@ def profile(request, username):
         'page_obj': page_obj,
         'user_obj': user_obj,
         'following': following,
-        'subscribers': subscribers
-    }
+        'subscribers': subscribers}
     return render(request, 'posts/profile.html', context)
 
 
@@ -78,13 +77,12 @@ def post_edit(request, post_id):
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
-        instance=post
-    )
+        instance=post)
     if form.is_valid():
         form.save()
         return redirect('posts:post_detail', post_id=post_id)
 
-    context = {'post': post, 'form': form, 'is_edit': True, }
+    context = {'post': post, 'form': form, 'is_edit': True}
     return render(request, 'posts/create_post.html', context)
 
 
